@@ -84,9 +84,9 @@ class RuuviTag(object):
         if b.find('0xFF990403'):
             b = list(b.split('0xFF990403', count=2))[-1]
             _, humidity, temperature, temperature_fraction, pressure, \
-            accel_x, accel_y, accel_z, battery_voltage = b.unpack(
-                'uint:32, uint:8, int:8, uint:8, uint:16,' +
-                'int:16, int:16, int:16, uint:16')
+                accel_x, accel_y, accel_z, battery_voltage = b.unpack(
+                    'uint:32, uint:8, int:8, uint:8, uint:16,' +
+                    'int:16, int:16, int:16, uint:16')
 
             return cls(
                 address,
@@ -97,22 +97,22 @@ class RuuviTag(object):
                 acceleration_x=accel_x / 1000.0,
                 acceleration_y=accel_y / 1000.0,
                 acceleration_z=accel_z / 1000.0,
-                battery_voltage = battery_voltage / 1000.0
+                battery_voltage=battery_voltage / 1000.0
             )
 
         if b.find('0xFF990405'):
             b = list(b.split('0xFF990405', count=2))[-1]
             _, temperature, humidity, pressure, \
-            accel_x, accel_y, accel_z, \
-            battery_voltage, tx_power, \
-            movement_counter, measurement_sequence, mac = b.unpack(
-                'uint:32, int:16, uint:16, uint:16,' +
-                'int:16, int:16, int:16,' +
-                'uint:11, uint:5,' +
-                'uint:8, uint:16, uint:48')
+                accel_x, accel_y, accel_z, \
+                battery_voltage, tx_power, \
+                movement_counter, measurement_sequence, mac = b.unpack(
+                    'uint:32, int:16, uint:16, uint:16,' +
+                    'int:16, int:16, int:16,' +
+                    'uint:11, uint:5,' +
+                    'uint:8, uint:16, uint:48')
 
             mac = '%x' % mac
-            mac = ':'.join(mac[i:i+2] for i in range(0,12,2))
+            mac = ':'.join(mac[i:i + 2] for i in range(0, 12, 2))
 
             return cls(
                 address,

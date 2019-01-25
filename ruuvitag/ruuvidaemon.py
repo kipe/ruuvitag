@@ -1,4 +1,3 @@
-import time
 import threading
 
 from bluepy import btle
@@ -9,7 +8,8 @@ class RuuviDaemon(threading.Thread):
     class ScanDelegate(btle.DefaultDelegate):
         def __init__(self, daemon, *args, **kwargs):
             self.daemon = daemon
-            # Use old style class to initialize, as that's required by btle ":D"
+            # Use old style class to initialize,
+            # as that's required by btle ":D"
             btle.DefaultDelegate.__init__(self, *args, **kwargs)
 
         def handleDiscovery(self, device, is_new_device, is_new_data):
