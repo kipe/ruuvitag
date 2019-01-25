@@ -134,13 +134,21 @@ class RuuviTag(object):
         '''
         b = BitArray(bytes=data)
 
+        # Try to find protocol version 3
+        # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
         if b.find('0xFF990403'):
+            # If it's found, parse data
             b = list(b.split('0xFF990403', count=2))[-1]
             _, humidity, temperature, temperature_fraction, pressure, \
                 accel_x, accel_y, accel_z, battery_voltage = b.unpack(
-                    'uint:32, uint:8, int:8, uint:8, uint:16,' +
+                    # Ignore the packet type and manufacturer specs,
+                    # as they've been handled before
+                    'uint:32,' +
+                    # Parse the actual payload
+                    'uint:8, int:8, uint:8, uint:16,' +
                     'int:16, int:16, int:16, uint:16')
 
+            # ... and return an instance of the calling class
             return cls(
                 address,
                 3,
@@ -153,20 +161,32 @@ class RuuviTag(object):
                 battery_voltage=battery_voltage / 1000.0
             )
 
+        # Try to find protocol version 3
+        # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-5-protocol-specification
         if b.find('0xFF990405'):
+            # If it's found, parse data
             b = list(b.split('0xFF990405', count=2))[-1]
             _, temperature, humidity, pressure, \
                 accel_x, accel_y, accel_z, \
                 battery_voltage, tx_power, \
                 movement_counter, measurement_sequence, mac = b.unpack(
-                    'uint:32, int:16, uint:16, uint:16,' +
+                    # Ignore the packet type and manufacturer specs,
+                    # as they've been handled before
+                    'uint:32,' +
+                    # Parse the actual payload
+                    'int:16, uint:16, uint:16,' +
                     'int:16, int:16, int:16,' +
                     'uint:11, uint:5,' +
                     'uint:8, uint:16, uint:48')
 
+            # Not sure what to do with MAC at the moment?
+            # Maybe compare it to the one received by btle and
+            # raise an exception
+            # measurement if it doesn't match?
             mac = '%x' % mac
             mac = ':'.join(mac[i:i + 2] for i in range(0, 12, 2))
 
+            # ... and return an instance of the calling class
             return cls(
                 address,
                 5,
