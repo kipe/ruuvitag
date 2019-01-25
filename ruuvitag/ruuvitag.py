@@ -181,8 +181,7 @@ class RuuviTag(object):
 
             # Not sure what to do with MAC at the moment?
             # Maybe compare it to the one received by btle and
-            # raise an exception
-            # measurement if it doesn't match?
+            # raise an exception if doesn't match?
             mac = '%x' % mac
             mac = ':'.join(mac[i:i + 2] for i in range(0, 12, 2))
 
