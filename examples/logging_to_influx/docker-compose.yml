@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+    ruuvilogger:
+        build: .
+        depends_on:
+            - influxdb
+        extra_hosts:
+            - 'influxdb:127.0.0.99'
+        privileged: true
+        network_mode: host
+        restart: unless-stopped
+    grafana:
+        image: grafana/grafana:latest
+        depends_on:
+            - influxdb
+        volumes:
+            - ./grafana:/var/lib/grafana
+        ports:
+            - "127.0.0.99:3000:3000"
+        restart: unless-stopped
+    influxdb:
+        image: influxdb:latest
+        volumes:
+            - ./influxdb:/var/lib/influxdb
+        ports:
+            - '127.0.0.99:8086:8086/tcp'
+        restart: unless-stopped
