@@ -6,13 +6,34 @@ from bitstring import BitArray
 
 
 class RuuviTag(object):
+    '''An instance of RuuviTag. Usually created by RuuviTag.scan().'''
     def __init__(self, address, protocol, temperature=float('nan'),
                  humidity=float('nan'), pressure=float('nan'),
                  acceleration_x=float('nan'), acceleration_y=float('nan'),
                  acceleration_z=float('nan'),
                  battery_voltage=float('nan'), tx_power=float('nan'),
                  movement_counter=0, measurement_sequence=0):
+        '''Initialize an instance of RuuviTag.
+        Ususally created by RuuviTag.scan().
 
+        Args:
+            address (str): the MAC address of the RuuviTag
+            protocol (int): protocol version of the message
+
+        Keyword args:
+            temperature (float): temperature. Defaults to NaN.
+            humidity (float): humidity. Defaults to NaN.
+            pressure (float): pressure. Defaults to NaN.
+            acceleration_x (float): acceleration_x. Defaults to NaN.
+            acceleration_y (float): acceleration_y. Defaults to NaN.
+            acceleration_z (float): acceleration_z. Defaults to NaN.
+            battery_voltage (float): battery_voltage. Defaults to NaN.
+            tx_power (float): tx_power. Defaults to NaN.
+            movement_counter (int): movement_counter. Defaults to NaN.
+            measurement_sequence (int): measurement_sequence. Defaults to NaN.
+        '''
+
+        #: pendulum.instance: datetime of last update
         self.last_seen = pendulum.now()
         self.address = address
         self.protocol = protocol
@@ -27,6 +48,7 @@ class RuuviTag(object):
         self.movement_counter = movement_counter
         self.measurement_sequence = measurement_sequence
 
+        #: Event: event to signify movement detection
         self.movement_detected = Event()
 
     def __repr__(self):
@@ -42,6 +64,29 @@ class RuuviTag(object):
                acceleration_x=None, acceleration_y=None, acceleration_z=None,
                battery_voltage=None, tx_power=None,
                movement_counter=None, measurement_sequence=None, **kwargs):
+        '''Update the RuuviTag instance.
+
+        Updates last_seen and sets movement_detected, if value differs from
+        previous.
+
+        Keyword args:
+            temperature (float): temperature. Defaults to previous value
+            humidity (float): humidity. Defaults to previous value
+            pressure (float): pressure. Defaults to previous value
+            acceleration_x (float): acceleration_x. Defaults to previous
+                value
+            acceleration_y (float): acceleration_y. Defaults to previous
+                value
+            acceleration_z (float): acceleration_z. Defaults to previous
+                value
+            battery_voltage (float): battery_voltage. Defaults to previous
+                value
+            tx_power (float): tx_power. Defaults to previous value
+            movement_counter (int): movement_counter. Defaults to previous
+                value
+            measurement_sequence (int): measurement_sequence. Defaults to
+                previous value
+        '''
 
         self.last_seen = pendulum.now()
 
@@ -61,6 +106,7 @@ class RuuviTag(object):
         self.measurement_sequence = measurement_sequence
 
     def as_dict(self):
+        '''Returns all (significant) values as a dictionary.'''
         return {
             'address': self.address,
             'protocol': self.protocol,
@@ -79,6 +125,13 @@ class RuuviTag(object):
 
     @classmethod
     def parse(cls, address, data):
+        '''Used to parse data received from RuuviTag.
+        Currently supports versions 3 and 5 of the protocol.
+
+        Arguments:
+            address (str): MAC address of RuuviTag.
+            data (bytes): received data in bytes.
+        '''
         b = BitArray(bytes=data)
 
         if b.find('0xFF990403'):
@@ -131,6 +184,13 @@ class RuuviTag(object):
 
     @classmethod
     def scan(cls, interface_index=0, timeout=2):
+        '''Scan for RuuviTags. Yields RuuviTags as they're found.
+
+        Keyword arguments:
+                interface_index: The index of bluetooth device to use.
+                    Defaults to 0
+                timeout (float): Timeout for the scan. Defaults to 2.0.
+        '''
         for device in btle.Scanner(interface_index).scan(timeout):
             try:
                 tag = cls.parse(device.addr, device.rawData)

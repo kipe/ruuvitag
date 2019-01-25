@@ -5,7 +5,20 @@ from ruuvitag import RuuviTag
 
 
 class RuuviDaemon(threading.Thread):
+    '''A threaded scanner for RuuviTags.'''
+
     class ScanDelegate(btle.DefaultDelegate):
+        '''
+        Custom delegate to receive btle scan results,
+        used internally to notify RuuviDaemon.
+
+        Keyword arguments:
+                interface_index (int): the index of bluetooth device to use.
+                    Defaults to 0.
+                callback: function to call when receiving data.
+                    Defaults to None.
+                    Function signature is callback(tag, is_new: False)
+        '''
         def __init__(self, daemon, *args, **kwargs):
             self.daemon = daemon
             # Use old style class to initialize,
@@ -13,6 +26,7 @@ class RuuviDaemon(threading.Thread):
             btle.DefaultDelegate.__init__(self, *args, **kwargs)
 
         def handleDiscovery(self, device, is_new_device, is_new_data):
+            ''' Call update_tag method from RuuviDaemon. '''
             self.daemon.update_tag(device)
 
     def __init__(self, interface_index=0, callback=None, *args, **kwargs):
@@ -24,6 +38,7 @@ class RuuviDaemon(threading.Thread):
         super(RuuviDaemon, self).__init__(*args, **kwargs)
 
     def run(self):
+        '''Main-loop of the daemon, started via daemon.start().'''
         scanner = btle.Scanner().withDelegate(RuuviDaemon.ScanDelegate(self))
         scanner.start(passive=True)
 
@@ -33,9 +48,12 @@ class RuuviDaemon(threading.Thread):
         scanner.stop()
 
     def stop(self):
+        '''Used to stop the (running) daemon.'''
         self.__stop.set()
 
     def update_tag(self, device):
+        '''Updates the RuuviTag, based on the information received from
+        ScanDelegate.handleDiscovery.'''
         try:
             tag = RuuviTag.parse(device.addr, device.rawData)
         except:
@@ -53,5 +71,7 @@ class RuuviDaemon(threading.Thread):
         self.callback(self.tags[tag.address], is_new=is_new)
 
     def callback(self, tag, is_new=False):
+        '''Callback to run when a broadcast from a RuuviTag has been
+        received.'''
         if self.callback_function:
             self.callback_function(tag, is_new=is_new)
