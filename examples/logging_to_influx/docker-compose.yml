@@ -5,8 +5,12 @@ services:
         build: .
         depends_on:
             - influxdb
+        # Define the influxdb host, as it's not available with network_mode
+        # set to host
         extra_hosts:
             - 'influxdb:127.0.0.99'
+        # Unfortunately for bluetooth to work inside a container,
+        # both privideged mode and host network mode need to be used
         privileged: true
         network_mode: host
         restart: unless-stopped
@@ -16,6 +20,8 @@ services:
             - influxdb
         volumes:
             - ./grafana:/var/lib/grafana
+        # Expose Grafana in default port, but in the ip address
+        # 127.0.0.99
         ports:
             - "127.0.0.99:3000:3000"
         restart: unless-stopped
@@ -23,6 +29,8 @@ services:
         image: influxdb:latest
         volumes:
             - ./influxdb:/var/lib/influxdb
+        # Need to listen on an interface instead of using the networking
+        # between containers, as ruuvilogger needs to run with network_mode: host
         ports:
             - '127.0.0.99:8086:8086/tcp'
         restart: unless-stopped
