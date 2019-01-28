@@ -161,7 +161,7 @@ class RuuviTag(object):
                 battery_voltage=battery_voltage / 1000.0
             )
 
-        # Try to find protocol version 3
+        # Try to find protocol version 5
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-5-protocol-specification
         if b.find('0xFF990405'):
             # If it's found, parse data
