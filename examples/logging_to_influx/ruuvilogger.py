@@ -75,7 +75,7 @@ if __name__ == '__main__':
     ruuvilogger = RuuviLogger()
     ruuvilogger.start()
 
-    while True:
+    while ruuvilogger.is_alive():
         time.sleep(1)
 
     ruuvilogger.stop()
