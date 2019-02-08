@@ -1,3 +1,4 @@
+from math import isnan
 from ruuvitag import RuuviDaemon
 from influxdb import InfluxDBClient
 
@@ -57,7 +58,12 @@ class RuuviLogger(RuuviDaemon):
             [{
                 'measurement': 'ruuvitag',
                 'time': tag_as_dict.pop('last_seen'),
-                'fields': tag_as_dict,
+                'fields': {
+                    key: value
+                    for key, value in tag_as_dict.items()
+                    # Filter out NaN -values, as InfluxDB doesn't like them
+                    if not isnan(value)
+                },
             }],
             tags=measurement_tags
         )
