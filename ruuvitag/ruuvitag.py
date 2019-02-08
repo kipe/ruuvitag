@@ -107,7 +107,7 @@ class RuuviTag(object):
 
     def as_dict(self):
         '''Returns all (significant) values as a dictionary.'''
-        return {
+        values = {
             'address': self.address,
             'protocol': self.protocol,
             'temperature': self.temperature,
@@ -117,11 +117,15 @@ class RuuviTag(object):
             'acceleration_y': self.acceleration_y,
             'acceleration_z': self.acceleration_z,
             'battery_voltage': self.battery_voltage,
-            'tx_power': self.tx_power,
-            'movement_counter': self.movement_counter,
-            'measurement_sequence': self.measurement_sequence,
             'last_seen': self.last_seen,
         }
+        if self.protocol == 5:
+            values.update({
+                'tx_power': self.tx_power,
+                'movement_counter': self.movement_counter,
+                'measurement_sequence': self.measurement_sequence,
+            })
+        return values
 
     @classmethod
     def parse(cls, address, data):
