@@ -140,14 +140,14 @@ class RuuviTag(object):
 
         # Try to find protocol version 3
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
-        if b.find('0xFF990403'):
+        if b.find('0x990403'):
             # If it's found, parse data
-            b = list(b.split('0xFF990403', count=2))[-1]
+            b = list(b.split('0x990403', count=2))[-1]
             _, humidity, temperature, temperature_fraction, pressure, \
                 accel_x, accel_y, accel_z, battery_voltage = b.unpack(
                     # Ignore the packet type and manufacturer specs,
                     # as they've been handled before
-                    'uint:32,' +
+                    'uint:24,' +
                     # Parse the actual payload
                     'uint:8, int:8, uint:8, uint:16,' +
                     'int:16, int:16, int:16, uint:16')
@@ -167,21 +167,21 @@ class RuuviTag(object):
 
         # Try to find protocol version 5
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-5-protocol-specification
-        if b.find('0xFF990405'):
+        if b.find('0x990405'):
             # If it's found, parse data
-            b = list(b.split('0xFF990405', count=2))[-1]
+            b = list(b.split('0x990405', count=2))[-1]
             _, temperature, humidity, pressure, \
                 accel_x, accel_y, accel_z, \
                 battery_voltage, tx_power, \
                 movement_counter, measurement_sequence, mac = b.unpack(
                     # Ignore the packet type and manufacturer specs,
                     # as they've been handled before
-                    'uint:32,' +
+                    'uint:24,' +
                     # Parse the actual payload
                     'int:16, uint:16, uint:16,' +
                     'int:16, int:16, int:16,' +
                     'uint:11, uint:5,' +
-                    'uint:8, uint:16, uint:48')
+                    'uint:8, uint:16, uint:40')
 
             # Not sure what to do with MAC at the moment?
             # Maybe compare it to the one received by btle and
@@ -207,17 +207,30 @@ class RuuviTag(object):
 
     @classmethod
     def scan(cls, interface_index=0, timeout=2):
-        '''Scan for RuuviTags. Yields RuuviTags as they're found.
+        '''Scan for RuuviTags. Returns a list of RuuviTags found.
 
         Keyword arguments:
                 interface_index: The index of bluetooth device to use.
                     Defaults to 0
                 timeout (float): Timeout for the scan. Defaults to 2.0.
         '''
-        for device in btle.Scanner(interface_index).scan(timeout):
-            try:
-                tag = cls.parse(device.addr, device.rawData)
+        import time
+        from bleson import get_provider, Observer
+
+        tags = []
+
+        def on_advertisement(advertisement):
+            if advertisement.mfg_data:
+                tag = cls.parse(advertisement.address.address, advertisement.mfg_data)
                 if tag:
-                    yield tag
-            except:
-                pass
+                    tags.append(tag)
+
+        adapter = get_provider().get_adapter(adapter_id=interface_index)
+        observer = Observer(adapter)
+        observer.on_advertising_data = on_advertisement
+
+        observer.start()
+        time.sleep(timeout)
+        observer.stop()
+
+        return tags

@@ -26,6 +26,9 @@ setup(
     ],
     install_requires=[
         'bitstring>=3.1.5',
-        'bluepy>=1.3.0',
         'pendulum==2.0.4',
+        'bleson==0.0.13',
+    ],
+    dependency_links = [
+        'https://github.com/TheCellule/python-bleson/tarball/master#egg=bleson-0.0.13',
     ])
