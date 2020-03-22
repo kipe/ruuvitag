@@ -6,7 +6,7 @@ except ImportError:
 
 setup(
     name='ruuvitag',
-    version='0.0.2',
+    version='0.0.3',
     description='A library for reading environmental monitoring sensor RuuviTag.',
     author='Kimmo Huoman',
     author_email='kipenroskaposti@gmail.com',
