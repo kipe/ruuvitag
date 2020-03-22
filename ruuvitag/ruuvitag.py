@@ -152,6 +152,8 @@ class RuuviTag(object):
                     'uint:8, int:1, uint:7, uint:8, uint:16,' +
                     'int:16, int:16, int:16, uint:16')
 
+            temperature_sign = -1 if temperature_sign == -1 else 1
+
             # ... and return an instance of the calling class
             return cls(
                 address,
