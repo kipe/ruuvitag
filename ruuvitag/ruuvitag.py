@@ -1,4 +1,4 @@
-import pendulum
+import arrow
 from threading import Event
 
 from bluepy import btle
@@ -34,7 +34,7 @@ class RuuviTag(object):
         '''
 
         #: pendulum.instance: datetime of last update
-        self.last_seen = pendulum.now()
+        self.last_seen = arrow.utcnow()
         self.address = address
         self.protocol = protocol
         self.temperature = temperature
@@ -88,7 +88,7 @@ class RuuviTag(object):
                 previous value
         '''
 
-        self.last_seen = pendulum.now()
+        self.last_seen = arrow.utcnow()
 
         self.temperature = temperature
         self.humidity = humidity

@@ -6,7 +6,7 @@ except ImportError:
 
 setup(
     name='ruuvitag',
-    version='0.0.3',
+    version='0.1.0',
     description='A library for reading environmental monitoring sensor RuuviTag.',
     author='Kimmo Huoman',
     author_email='kipenroskaposti@gmail.com',
@@ -27,5 +27,5 @@ setup(
     install_requires=[
         'bitstring>=3.1.5',
         'bluepy>=1.3.0',
-        'pendulum==2.0.4',
+        'arrow>=1.2.1',
     ])
