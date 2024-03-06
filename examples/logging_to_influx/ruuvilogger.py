@@ -57,7 +57,7 @@ class RuuviLogger(RuuviDaemon):
         self.influx.write_points(
             [{
                 'measurement': 'ruuvitag',
-                'time': tag_as_dict.pop('last_seen'),
+                'time': tag_as_dict.pop('last_seen').datetime,
                 'fields': {
                     key: value
                     for key, value in tag_as_dict.items()
