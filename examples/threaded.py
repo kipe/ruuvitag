@@ -5,7 +5,7 @@ def callback(tag, is_new=False):
     print(tag)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import time
 
     # Initialize a RuuviDaemon instance with callback, that prints out the tag information

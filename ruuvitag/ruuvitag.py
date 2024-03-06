@@ -6,14 +6,24 @@ from bitstring import BitArray
 
 
 class RuuviTag(object):
-    '''An instance of RuuviTag. Usually created by RuuviTag.scan().'''
-    def __init__(self, address, protocol, temperature=float('nan'),
-                 humidity=float('nan'), pressure=float('nan'),
-                 acceleration_x=float('nan'), acceleration_y=float('nan'),
-                 acceleration_z=float('nan'),
-                 battery_voltage=float('nan'), tx_power=float('nan'),
-                 movement_counter=0, measurement_sequence=0):
-        '''Initialize an instance of RuuviTag.
+    """An instance of RuuviTag. Usually created by RuuviTag.scan()."""
+
+    def __init__(
+        self,
+        address,
+        protocol,
+        temperature=float("nan"),
+        humidity=float("nan"),
+        pressure=float("nan"),
+        acceleration_x=float("nan"),
+        acceleration_y=float("nan"),
+        acceleration_z=float("nan"),
+        battery_voltage=float("nan"),
+        tx_power=float("nan"),
+        movement_counter=0,
+        measurement_sequence=0,
+    ):
+        """Initialize an instance of RuuviTag.
         Ususally created by RuuviTag.scan().
 
         Args:
@@ -31,9 +41,8 @@ class RuuviTag(object):
             tx_power (float): tx_power. Defaults to NaN.
             movement_counter (int): movement_counter. Defaults to NaN.
             measurement_sequence (int): measurement_sequence. Defaults to NaN.
-        '''
+        """
 
-        #: pendulum.instance: datetime of last update
         self.last_seen = arrow.utcnow()
         self.address = address
         self.protocol = protocol
@@ -52,19 +61,29 @@ class RuuviTag(object):
         self.movement_detected = Event()
 
     def __repr__(self):
-        return '<RuuviTag V%i %s %.02fc, %.02f%%, %s>' % (
+        return "<RuuviTag V%i %s %.02fc, %.02f%%, %s>" % (
             self.protocol,
             self.address,
             self.temperature,
             self.humidity,
-            self.last_seen.isoformat()
+            self.last_seen.isoformat(),
         )
 
-    def update(self, temperature=None, humidity=None, pressure=None,
-               acceleration_x=None, acceleration_y=None, acceleration_z=None,
-               battery_voltage=None, tx_power=None,
-               movement_counter=None, measurement_sequence=None, **kwargs):
-        '''Update the RuuviTag instance.
+    def update(
+        self,
+        temperature=None,
+        humidity=None,
+        pressure=None,
+        acceleration_x=None,
+        acceleration_y=None,
+        acceleration_z=None,
+        battery_voltage=None,
+        tx_power=None,
+        movement_counter=None,
+        measurement_sequence=None,
+        **kwargs
+    ):
+        """Update the RuuviTag instance.
 
         Updates last_seen and sets movement_detected, if value differs from
         previous.
@@ -86,7 +105,7 @@ class RuuviTag(object):
                 value
             measurement_sequence (int): measurement_sequence. Defaults to
                 previous value
-        '''
+        """
 
         self.last_seen = arrow.utcnow()
 
@@ -106,51 +125,65 @@ class RuuviTag(object):
         self.measurement_sequence = measurement_sequence
 
     def as_dict(self):
-        '''Returns all (significant) values as a dictionary.'''
+        """Returns all (significant) values as a dictionary."""
         values = {
-            'address': self.address,
-            'protocol': self.protocol,
-            'temperature': self.temperature,
-            'humidity': self.humidity,
-            'pressure': self.pressure,
-            'acceleration_x': self.acceleration_x,
-            'acceleration_y': self.acceleration_y,
-            'acceleration_z': self.acceleration_z,
-            'battery_voltage': self.battery_voltage,
-            'last_seen': self.last_seen,
+            "address": self.address,
+            "protocol": self.protocol,
+            "temperature": self.temperature,
+            "humidity": self.humidity,
+            "pressure": self.pressure,
+            "acceleration_x": self.acceleration_x,
+            "acceleration_y": self.acceleration_y,
+            "acceleration_z": self.acceleration_z,
+            "battery_voltage": self.battery_voltage,
+            "last_seen": self.last_seen,
         }
         if self.protocol == 5:
-            values.update({
-                'tx_power': self.tx_power,
-                'movement_counter': self.movement_counter,
-                'measurement_sequence': self.measurement_sequence,
-            })
+            values.update(
+                {
+                    "tx_power": self.tx_power,
+                    "movement_counter": self.movement_counter,
+                    "measurement_sequence": self.measurement_sequence,
+                }
+            )
         return values
 
     @classmethod
     def parse(cls, address, data):
-        '''Used to parse data received from RuuviTag.
+        """Used to parse data received from RuuviTag.
         Currently supports versions 3 and 5 of the protocol.
 
         Arguments:
             address (str): MAC address of RuuviTag.
             data (bytes): received data in bytes.
-        '''
+        """
         b = BitArray(bytes=data)
 
         # Try to find protocol version 3
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
-        if b.find('0xFF990403'):
+        if b.find("0xFF990403"):
             # If it's found, parse data
-            b = list(b.split('0xFF990403', count=2))[-1]
-            _, humidity, temperature_sign, temperature, temperature_fraction, pressure, \
-                accel_x, accel_y, accel_z, battery_voltage = b.unpack(
-                    # Ignore the packet type and manufacturer specs,
-                    # as they've been handled before
-                    'uint:32,' +
-                    # Parse the actual payload
-                    'uint:8, int:1, uint:7, uint:8, uint:16,' +
-                    'int:16, int:16, int:16, uint:16')
+            b = list(b.split("0xFF990403", count=2))[-1]
+            (
+                _,
+                humidity,
+                temperature_sign,
+                temperature,
+                temperature_fraction,
+                pressure,
+                accel_x,
+                accel_y,
+                accel_z,
+                battery_voltage,
+            ) = b.unpack(
+                # Ignore the packet type and manufacturer specs,
+                # as they've been handled before
+                "uint:32,"
+                +
+                # Parse the actual payload
+                "uint:8, int:1, uint:7, uint:8, uint:16,"
+                + "int:16, int:16, int:16, uint:16"
+            )
 
             temperature_sign = -1 if temperature_sign == -1 else 1
 
@@ -158,38 +191,51 @@ class RuuviTag(object):
             return cls(
                 address,
                 3,
-                temperature=temperature_sign * (float(temperature) + temperature_fraction / 100.0),
+                temperature=temperature_sign
+                * (float(temperature) + temperature_fraction / 100.0),
                 humidity=humidity / 2.0,
                 pressure=(pressure + 50000) / 100.0,
                 acceleration_x=accel_x / 1000.0,
                 acceleration_y=accel_y / 1000.0,
                 acceleration_z=accel_z / 1000.0,
-                battery_voltage=battery_voltage / 1000.0
+                battery_voltage=battery_voltage / 1000.0,
             )
 
         # Try to find protocol version 5
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-5-protocol-specification
-        if b.find('0xFF990405'):
+        if b.find("0xFF990405"):
             # If it's found, parse data
-            b = list(b.split('0xFF990405', count=2))[-1]
-            _, temperature, humidity, pressure, \
-                accel_x, accel_y, accel_z, \
-                battery_voltage, tx_power, \
-                movement_counter, measurement_sequence, mac = b.unpack(
-                    # Ignore the packet type and manufacturer specs,
-                    # as they've been handled before
-                    'uint:32,' +
-                    # Parse the actual payload
-                    'int:16, uint:16, uint:16,' +
-                    'int:16, int:16, int:16,' +
-                    'uint:11, uint:5,' +
-                    'uint:8, uint:16, uint:48')
+            b = list(b.split("0xFF990405", count=2))[-1]
+            (
+                _,
+                temperature,
+                humidity,
+                pressure,
+                accel_x,
+                accel_y,
+                accel_z,
+                battery_voltage,
+                tx_power,
+                movement_counter,
+                measurement_sequence,
+                mac,
+            ) = b.unpack(
+                # Ignore the packet type and manufacturer specs,
+                # as they've been handled before
+                "uint:32,"
+                +
+                # Parse the actual payload
+                "int:16, uint:16, uint:16,"
+                + "int:16, int:16, int:16,"
+                + "uint:11, uint:5,"
+                + "uint:8, uint:16, uint:48"
+            )
 
             # Not sure what to do with MAC at the moment?
             # Maybe compare it to the one received by btle and
             # raise an exception if doesn't match?
-            mac = '%x' % mac
-            mac = ':'.join(mac[i:i + 2] for i in range(0, 12, 2))
+            mac = "%x" % mac
+            mac = ":".join(mac[i : i + 2] for i in range(0, 12, 2))
 
             # ... and return an instance of the calling class
             return cls(
@@ -204,18 +250,18 @@ class RuuviTag(object):
                 battery_voltage=(battery_voltage + 1600) / 1000.0,
                 tx_power=-40 + tx_power,
                 movement_counter=movement_counter,
-                measurement_sequence=measurement_sequence
+                measurement_sequence=measurement_sequence,
             )
 
     @classmethod
     def scan(cls, interface_index=0, timeout=2):
-        '''Scan for RuuviTags. Yields RuuviTags as they're found.
+        """Scan for RuuviTags. Yields RuuviTags as they're found.
 
         Keyword arguments:
                 interface_index: The index of bluetooth device to use.
                     Defaults to 0
                 timeout (float): Timeout for the scan. Defaults to 2.0.
-        '''
+        """
         for device in btle.Scanner(interface_index).scan(timeout):
             try:
                 tag = cls.parse(device.addr, device.rawData)

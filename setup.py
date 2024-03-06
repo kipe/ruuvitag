@@ -5,27 +5,28 @@ except ImportError:
     from distutils.core import setup
 
 setup(
-    name='ruuvitag',
-    version='0.1.0',
-    description='A library for reading environmental monitoring sensor RuuviTag.',
-    author='Kimmo Huoman',
-    author_email='kipenroskaposti@gmail.com',
-    url='https://github.com/kipe/ruuvitag',
-    license='MIT',
+    name="ruuvitag",
+    version="0.1.0",
+    description="A library for reading environmental monitoring sensor RuuviTag.",
+    author="Kimmo Huoman",
+    author_email="kipenroskaposti@gmail.com",
+    url="https://github.com/kipe/ruuvitag",
+    license="MIT",
     packages=[
-        'ruuvitag',
+        "ruuvitag",
     ],
     classifiers=[
-        'Development Status :: 3 - Alpha',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.6',
-        'Topic :: Home Automation',
-        'Topic :: Software Development :: Libraries',
+        "Development Status :: 3 - Alpha",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
+        "Topic :: Home Automation",
+        "Topic :: Software Development :: Libraries",
     ],
     install_requires=[
-        'bitstring>=3.1.5',
-        'bluepy>=1.3.0',
-        'arrow>=1.2.1',
-    ])
+        "bitstring>=3.1.5",
+        "bluepy>=1.3.0",
+        "arrow>=1.2.1",
+    ],
+)
