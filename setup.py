@@ -25,7 +25,7 @@ setup(
         "Topic :: Software Development :: Libraries",
     ],
     install_requires=[
-        "bitstring>=3.1.5",
+        "bitstring>=5.0.0",
         "bluepy>=1.3.0",
         "arrow>=1.2.1",
     ],
