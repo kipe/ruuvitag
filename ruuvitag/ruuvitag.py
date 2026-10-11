@@ -157,11 +157,12 @@ class RuuviTag(object):
             address (str): MAC address of RuuviTag.
             data (bytes): received data in bytes.
         """
-        b = BitArray(bytes=data)
+        b = BitArray.from_bytes(data)
 
         # Try to find protocol version 3
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-3-protocol-specification
-        if b.find("0xFF990403"):
+        # bitstring 5+: find() returns int | None (bit 0 is a valid match)
+        if b.find("0xFF990403") is not None:
             # If it's found, parse data
             b = list(b.split("0xFF990403", count=2))[-1]
             (
@@ -203,7 +204,7 @@ class RuuviTag(object):
 
         # Try to find protocol version 5
         # https://github.com/ruuvi/ruuvi-sensor-protocols#data-format-5-protocol-specification
-        if b.find("0xFF990405"):
+        if b.find("0xFF990405") is not None:
             # If it's found, parse data
             b = list(b.split("0xFF990405", count=2))[-1]
             (
