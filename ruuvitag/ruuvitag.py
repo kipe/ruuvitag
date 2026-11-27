@@ -1,3 +1,5 @@
+import math
+
 import arrow
 from threading import Event
 
@@ -22,6 +24,15 @@ class RuuviTag(object):
         tx_power=float("nan"),
         movement_counter=0,
         measurement_sequence=0,
+        pm1_0=float("nan"),
+        pm2_5=float("nan"),
+        pm4_0=float("nan"),
+        pm10_0=float("nan"),
+        co2=float("nan"),
+        voc=float("nan"),
+        nox=float("nan"),
+        luminosity=float("nan"),
+        calibration_in_progress=None,
     ):
         """Initialize an instance of RuuviTag.
         Ususally created by RuuviTag.scan().
@@ -41,6 +52,16 @@ class RuuviTag(object):
             tx_power (float): tx_power. Defaults to NaN.
             movement_counter (int): movement_counter. Defaults to NaN.
             measurement_sequence (int): measurement_sequence. Defaults to NaN.
+            pm1_0 (float): pm1_0. Defaults to NaN.
+            pm2_5 (float): pm2_5. Defaults to NaN.
+            pm4_0 (float): pm4_0. Defaults to NaN.
+            pm10_0 (float): pm10_0. Defaults to NaN.
+            co2 (int): co2. Defaults to NaN.
+            voc (int): voc. Defaults to NaN.
+            nox (int): nox. Defaults to NaN.
+            luminosity (float): luminosity. Defaults to NaN.
+            calibration_in_progress (bool): calibration_in_progress.
+                Defaults to None.
         """
 
         self.last_seen = arrow.utcnow()
@@ -56,6 +77,15 @@ class RuuviTag(object):
         self.tx_power = tx_power
         self.movement_counter = movement_counter
         self.measurement_sequence = measurement_sequence
+        self.pm1_0 = pm1_0
+        self.pm2_5 = pm2_5
+        self.pm4_0 = pm4_0
+        self.pm10_0 = pm10_0
+        self.co2 = co2
+        self.voc = voc
+        self.nox = nox
+        self.luminosity = luminosity
+        self.calibration_in_progress = calibration_in_progress
 
         #: Event: event to signify movement detection
         self.movement_detected = Event()
@@ -151,7 +181,7 @@ class RuuviTag(object):
     @classmethod
     def parse(cls, address, data):
         """Used to parse data received from RuuviTag.
-        Currently supports versions 3 and 5 of the protocol.
+        Currently supports versions 3, 5, 6 and E1 of the protocol.
 
         Arguments:
             address (str): MAC address of RuuviTag.
@@ -252,6 +282,209 @@ class RuuviTag(object):
                 tx_power=-40 + tx_power,
                 movement_counter=movement_counter,
                 measurement_sequence=measurement_sequence,
+            )
+
+        # Try to find protocol version 6
+        # https://docs.ruuvi.com/communication/bluetooth-advertisements/data-format-6
+        if b.find("0xFF990406") is not None:
+            # If it's found, parse data
+            b = list(b.split("0xFF990406", count=2))[-1]
+            (
+                _,
+                temperature,
+                humidity,
+                pressure,
+                pm2_5,
+                co2,
+                voc_byte,
+                nox_byte,
+                luminosity,
+                _,
+                measurement_sequence,
+                flags,
+                _,
+            ) = b.unpack(
+                # Ignore the packet type and manufacturer specs,
+                # as they've been handled before
+                "uint:32,"
+                +
+                # Parse the actual payload
+                "int:16, uint:16, uint:16,"
+                + "uint:16, uint:16,"
+                + "uint:8, uint:8, uint:8, uint:8,"
+                + "uint:8, uint:8, uint:24"
+            )
+
+            # Most-negative signed and all-bits unsigned mean not available.
+            # Payload MAC is ignored, same as format 5.
+            if temperature == -32768:
+                temperature = float("nan")
+            else:
+                temperature = float(temperature) * 0.005
+
+            if humidity == 0xFFFF:
+                humidity = float("nan")
+            else:
+                humidity = humidity * 0.0025
+
+            if pressure == 0xFFFF:
+                pressure = float("nan")
+            else:
+                pressure = (pressure + 50000) / 100.0
+
+            if pm2_5 == 0xFFFF:
+                pm2_5 = float("nan")
+            else:
+                pm2_5 = pm2_5 / 10.0
+
+            if co2 == 0xFFFF:
+                co2 = float("nan")
+
+            # LSB of the 9-bit index lives in the flags byte.
+            voc = (voc_byte << 1) | ((flags >> 6) & 1)
+            nox = (nox_byte << 1) | ((flags >> 7) & 1)
+            if voc == 0x1FF:
+                voc = float("nan")
+            if nox == 0x1FF:
+                nox = float("nan")
+
+            # 8-bit logarithmic lux. Code 255 is not available.
+            if luminosity == 0xFF:
+                luminosity = float("nan")
+            else:
+                luminosity = round(
+                    math.exp(luminosity * math.log(65536) / 254) - 1, 2
+                )
+
+            # ... and return an instance of the calling class
+            return cls(
+                address,
+                6,
+                temperature=temperature,
+                humidity=humidity,
+                pressure=pressure,
+                pm2_5=pm2_5,
+                co2=co2,
+                voc=voc,
+                nox=nox,
+                luminosity=luminosity,
+                measurement_sequence=measurement_sequence,
+                calibration_in_progress=bool(flags & 1),
+            )
+
+        # Try to find protocol version E1
+        # https://docs.ruuvi.com/communication/bluetooth-advertisements/data-format-e1
+        if b.find("0xFF9904E1") is not None:
+            # If it's found, parse data
+            b = list(b.split("0xFF9904E1", count=2))[-1]
+            (
+                _,
+                temperature,
+                humidity,
+                pressure,
+                pm1_0,
+                pm2_5,
+                pm4_0,
+                pm10_0,
+                co2,
+                voc_byte,
+                nox_byte,
+                luminosity,
+                _,
+                _,
+                _,
+                measurement_sequence,
+                flags,
+                _,
+                _,
+            ) = b.unpack(
+                # Ignore the packet type and manufacturer specs,
+                # as they've been handled before
+                "uint:32,"
+                +
+                # Parse the actual payload
+                "int:16, uint:16, uint:16,"
+                + "uint:16, uint:16, uint:16, uint:16,"
+                + "uint:16, uint:8, uint:8, uint:24,"
+                + "uint:8, uint:8, uint:8,"
+                + "uint:24, uint:8, uint:40, uint:48"
+            )
+
+            # Most-negative signed and all-bits unsigned mean not available.
+            # Payload MAC is ignored, same as format 5.
+            if temperature == -32768:
+                temperature = float("nan")
+            else:
+                temperature = float(temperature) * 0.005
+
+            if humidity == 0xFFFF:
+                humidity = float("nan")
+            else:
+                humidity = humidity * 0.0025
+
+            if pressure == 0xFFFF:
+                pressure = float("nan")
+            else:
+                pressure = (pressure + 50000) / 100.0
+
+            if pm1_0 == 0xFFFF:
+                pm1_0 = float("nan")
+            else:
+                pm1_0 = pm1_0 / 10.0
+
+            if pm2_5 == 0xFFFF:
+                pm2_5 = float("nan")
+            else:
+                pm2_5 = pm2_5 / 10.0
+
+            if pm4_0 == 0xFFFF:
+                pm4_0 = float("nan")
+            else:
+                pm4_0 = pm4_0 / 10.0
+
+            if pm10_0 == 0xFFFF:
+                pm10_0 = float("nan")
+            else:
+                pm10_0 = pm10_0 / 10.0
+
+            if co2 == 0xFFFF:
+                co2 = float("nan")
+
+            # LSB of the 9-bit index lives in the flags byte.
+            voc = (voc_byte << 1) | ((flags >> 6) & 1)
+            nox = (nox_byte << 1) | ((flags >> 7) & 1)
+            if voc == 0x1FF:
+                voc = float("nan")
+            if nox == 0x1FF:
+                nox = float("nan")
+
+            # 24-bit lux in 0.01 steps. All bits set is not available.
+            if luminosity == 0xFFFFFF:
+                luminosity = float("nan")
+            else:
+                luminosity = luminosity / 100.0
+
+            # 24-bit counter. All bits set is not available.
+            if measurement_sequence == 0xFFFFFF:
+                measurement_sequence = float("nan")
+
+            # ... and return an instance of the calling class
+            return cls(
+                address,
+                0xE1,
+                temperature=temperature,
+                humidity=humidity,
+                pressure=pressure,
+                pm1_0=pm1_0,
+                pm2_5=pm2_5,
+                pm4_0=pm4_0,
+                pm10_0=pm10_0,
+                co2=co2,
+                voc=voc,
+                nox=nox,
+                luminosity=luminosity,
+                measurement_sequence=measurement_sequence,
+                calibration_in_progress=bool(flags & 1),
             )
 
     @classmethod
