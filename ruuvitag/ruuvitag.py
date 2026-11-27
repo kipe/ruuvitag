@@ -3,7 +3,6 @@ import math
 import arrow
 from threading import Event
 
-from bluepy import btle
 from bitstring import BitArray
 
 
@@ -180,9 +179,11 @@ class RuuviTag(object):
         self.luminosity = luminosity
         self.calibration_in_progress = calibration_in_progress
 
-        # Air formats have no counter. None means "not in this packet",
-        # not a change from the starting value of 0.
-        if movement_counter is not None:
+        # None and NaN mean this packet has no counter. NaN != NaN,
+        # so a missing counter must not be stored or treated as motion.
+        if movement_counter is not None and not (
+            isinstance(movement_counter, float) and math.isnan(movement_counter)
+        ):
             if movement_counter != self.movement_counter:
                 self.movement_detected.set()
 
@@ -329,18 +330,68 @@ class RuuviTag(object):
             mac = "%x" % mac
             mac = ":".join(mac[i : i + 2] for i in range(0, 12, 2))
 
+            # Most-negative signed and all-bits unsigned mean not available.
+            # Payload MAC is ignored.
+            if temperature == -32768:
+                temperature = float("nan")
+            else:
+                temperature = float(temperature) * 0.005
+
+            if humidity == 0xFFFF:
+                humidity = float("nan")
+            else:
+                humidity = humidity * 0.0025
+
+            if pressure == 0xFFFF:
+                pressure = float("nan")
+            else:
+                pressure = (pressure + 50000) / 100.0
+
+            if accel_x == -32768:
+                accel_x = float("nan")
+            else:
+                accel_x = accel_x / 1000.0
+
+            if accel_y == -32768:
+                accel_y = float("nan")
+            else:
+                accel_y = accel_y / 1000.0
+
+            if accel_z == -32768:
+                accel_z = float("nan")
+            else:
+                accel_z = accel_z / 1000.0
+
+            # 11 bits above 1.6 V. 2047 is not available.
+            if battery_voltage == 0x7FF:
+                battery_voltage = float("nan")
+            else:
+                battery_voltage = (battery_voltage + 1600) / 1000.0
+
+            # 5 bits, 2 dBm steps above -40 dBm. 31 is not available.
+            if tx_power == 0x1F:
+                tx_power = float("nan")
+            else:
+                tx_power = -40 + (tx_power * 2)
+
+            if movement_counter == 0xFF:
+                movement_counter = float("nan")
+
+            if measurement_sequence == 0xFFFF:
+                measurement_sequence = float("nan")
+
             # ... and return an instance of the calling class
             return cls(
                 address,
                 5,
-                temperature=float(temperature) * 0.005,
-                humidity=humidity * 0.0025,
-                pressure=(pressure + 50000) / 100.0,
-                acceleration_x=accel_x / 1000.0,
-                acceleration_y=accel_y / 1000.0,
-                acceleration_z=accel_z / 1000.0,
-                battery_voltage=(battery_voltage + 1600) / 1000.0,
-                tx_power=-40 + tx_power,
+                temperature=temperature,
+                humidity=humidity,
+                pressure=pressure,
+                acceleration_x=accel_x,
+                acceleration_y=accel_y,
+                acceleration_z=accel_z,
+                battery_voltage=battery_voltage,
+                tx_power=tx_power,
                 movement_counter=movement_counter,
                 measurement_sequence=measurement_sequence,
             )
@@ -557,6 +608,9 @@ class RuuviTag(object):
                     Defaults to 0
                 timeout (float): Timeout for the scan. Defaults to 2.0.
         """
+        # Imported here so parse() and the unit tests do not need bluepy.
+        from bluepy import btle
+
         for device in btle.Scanner(interface_index).scan(timeout):
             try:
                 tag = cls.parse(device.addr, device.rawData)
