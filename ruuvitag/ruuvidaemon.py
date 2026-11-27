@@ -1,23 +1,15 @@
 import threading
 
-from bluepy import btle
 from ruuvitag import RuuviTag
 
 
-class RuuviDaemon(threading.Thread):
-    """A threaded scanner for RuuviTags."""
+def _scan_delegate(btle):
+    """Build the bluepy delegate once bluepy has been imported."""
 
     class ScanDelegate(btle.DefaultDelegate):
         """
         Custom delegate to receive btle scan results,
         used internally to notify RuuviDaemon.
-
-        Keyword arguments:
-                interface_index (int): the index of bluetooth device to use.
-                    Defaults to 0.
-                callback: function to call when receiving data.
-                    Defaults to None.
-                    Function signature is callback(tag, is_new: False)
         """
 
         def __init__(self, daemon, *args, **kwargs):
@@ -30,6 +22,12 @@ class RuuviDaemon(threading.Thread):
             """Call update_tag method from RuuviDaemon."""
             self.daemon.update_tag(device)
 
+    return ScanDelegate
+
+
+class RuuviDaemon(threading.Thread):
+    """A threaded scanner for RuuviTags."""
+
     def __init__(self, interface_index=0, callback=None, *args, **kwargs):
         self.__stop = threading.Event()
         self.interface_index = interface_index
@@ -40,7 +38,10 @@ class RuuviDaemon(threading.Thread):
 
     def run(self):
         """Main-loop of the daemon, started via daemon.start()."""
-        scanner = btle.Scanner().withDelegate(RuuviDaemon.ScanDelegate(self))
+        # Imported here so importing the package does not need bluepy.
+        from bluepy import btle
+
+        scanner = btle.Scanner().withDelegate(_scan_delegate(btle)(self))
         scanner.start(passive=True)
 
         while not self.__stop.is_set():
