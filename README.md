@@ -24,5 +24,11 @@ while True:
         print(tag)
 ```
 
+`RuuviTag.parse()` supports data formats 3, 5, 6 and E1. Live scan via
+bluepy (`RuuviTag.scan()` and `RuuviDaemon`) returns format 6 only, because
+bluepy only receives classic 31-byte adverts. Format E1 is a longer
+Bluetooth 5 advert. To decode E1, pass those advert bytes to
+`RuuviTag.parse()` yourself.
+
 For more complicated examples including threading, and motion detection,
 see `examples` directory.
