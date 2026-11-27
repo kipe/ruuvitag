@@ -91,8 +91,10 @@ class RuuviTag(object):
         self.movement_detected = Event()
 
     def __repr__(self):
-        return "<RuuviTag V%i %s %.02fc, %.02f%%, %s>" % (
-            self.protocol,
+        # Format E1 is stored as 0xE1 (225). Print the spec name.
+        protocol = "E1" if self.protocol == 0xE1 else self.protocol
+        return "<RuuviTag V%s %s %.02fc, %.02f%%, %s>" % (
+            protocol,
             self.address,
             self.temperature,
             self.humidity,
@@ -111,12 +113,22 @@ class RuuviTag(object):
         tx_power=None,
         movement_counter=None,
         measurement_sequence=None,
+        pm1_0=None,
+        pm2_5=None,
+        pm4_0=None,
+        pm10_0=None,
+        co2=None,
+        voc=None,
+        nox=None,
+        luminosity=None,
+        calibration_in_progress=None,
         **kwargs
     ):
         """Update the RuuviTag instance.
 
-        Updates last_seen and sets movement_detected, if value differs from
-        previous.
+        Updates last_seen. Sets movement_detected when a movement_counter
+        is passed and the value differs from previous. Formats without a
+        counter (6 and E1) leave the counter and the event unchanged.
 
         Keyword args:
             temperature (float): temperature. Defaults to previous value
@@ -135,6 +147,16 @@ class RuuviTag(object):
                 value
             measurement_sequence (int): measurement_sequence. Defaults to
                 previous value
+            pm1_0 (float): pm1_0. Defaults to previous value
+            pm2_5 (float): pm2_5. Defaults to previous value
+            pm4_0 (float): pm4_0. Defaults to previous value
+            pm10_0 (float): pm10_0. Defaults to previous value
+            co2 (int): co2. Defaults to previous value
+            voc (int): voc. Defaults to previous value
+            nox (int): nox. Defaults to previous value
+            luminosity (float): luminosity. Defaults to previous value
+            calibration_in_progress (bool): calibration_in_progress.
+                Defaults to previous value
         """
 
         self.last_seen = arrow.utcnow()
@@ -147,15 +169,34 @@ class RuuviTag(object):
         self.acceleration_z = acceleration_z
         self.battery_voltage = battery_voltage
         self.tx_power = tx_power
-
-        if movement_counter != self.movement_counter:
-            self.movement_detected.set()
-
-        self.movement_counter = movement_counter
         self.measurement_sequence = measurement_sequence
+        self.pm1_0 = pm1_0
+        self.pm2_5 = pm2_5
+        self.pm4_0 = pm4_0
+        self.pm10_0 = pm10_0
+        self.co2 = co2
+        self.voc = voc
+        self.nox = nox
+        self.luminosity = luminosity
+        self.calibration_in_progress = calibration_in_progress
+
+        # Air formats have no counter. None means "not in this packet",
+        # not a change from the starting value of 0.
+        if movement_counter is not None:
+            if movement_counter != self.movement_counter:
+                self.movement_detected.set()
+
+            self.movement_counter = movement_counter
 
     def as_dict(self):
-        """Returns all (significant) values as a dictionary."""
+        """Returns all (significant) values as a dictionary.
+
+        Core readings are always included. Protocol 5 also includes
+        tx_power, movement_counter and measurement_sequence. Protocol 6
+        also includes pm2_5, co2, voc, nox, luminosity,
+        measurement_sequence and calibration_in_progress. Protocol E1
+        includes those plus pm1_0, pm4_0 and pm10_0.
+        """
         values = {
             "address": self.address,
             "protocol": self.protocol,
@@ -176,6 +217,26 @@ class RuuviTag(object):
                     "measurement_sequence": self.measurement_sequence,
                 }
             )
+        elif self.protocol in (6, 0xE1):
+            values.update(
+                {
+                    "pm2_5": self.pm2_5,
+                    "co2": self.co2,
+                    "voc": self.voc,
+                    "nox": self.nox,
+                    "luminosity": self.luminosity,
+                    "measurement_sequence": self.measurement_sequence,
+                    "calibration_in_progress": self.calibration_in_progress,
+                }
+            )
+            if self.protocol == 0xE1:
+                values.update(
+                    {
+                        "pm1_0": self.pm1_0,
+                        "pm4_0": self.pm4_0,
+                        "pm10_0": self.pm10_0,
+                    }
+                )
         return values
 
     @classmethod
